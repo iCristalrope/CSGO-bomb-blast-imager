@@ -1,37 +1,59 @@
-# csctl
-Scripting CS:GO over telnet.
-
+# CSGO bomb blast imager
 ## Description
-Execute cs:go commands from a file over telnet. This allows you to control execution timing and allows you to script usercmds (+left, +jump, etc.)  
+Tool that checks the dmg taken by the bomb blast on all points on a grid and represents it on the map radar.
 
-Tested on Python 3.7.4 but not extensively.  
-
-Big thanks to [@nibalizer](https://github.com/nibalizer) for [this project](https://github.com/nibalizer/csgo_remote_control), which was a huge help in figuring out how to interface with the client
+Based on a the [@csctl](https://github.com/403-Fruit/csctl) project by [@403-Fruit](https://github.com/403-Fruit) to input console commands programmatically over telnet. A big thank you to him !
 
 ## Setup
-    git clone https://github.com/403-Fruit/csctl.git
-    cd csctl
-    pip3 install -r requirements.txt
+    git clone https://github.com/iCristalrope/CSGO-bomb-blast-imager.git
+    cd csctleeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+    pip install -r requirements.txt
+
+## Prerequisites
+- Find a clean image of the radar of the map to test (best around 1000x1000 pixels) and save it in the project folder. Set the `radar_img` global var to the image name and set `mapname` too.
+- In game use the `noclip` and `cl_showpos 1` commands to fly around and find the minimum X, maximum X, minimum Y and maximum Y values of the smallest rectangle containing all the play area of the map and set `minX`, `maxX`, `minY`, `maxY` accordingly. 
+  ![alt text](doc/ingame.png "Flying to find the in-game coordinates that define the play area")
+- On the radar image find the minimum column, maximum column, minimum row, maximum row (in pixels) of the same play area rectangle and set `radarStartCol`, `radarEndCol`, `radarStartRow`, `radarEndRow` variables accordingly.
+  ![alt text](doc/cache.png "Finding rows & columns that bound the play area")
+- Set `gridWidth` and `gridHeight` to specify the density of the grid. Each point takes a bit over 9 seconds so the estimated runtime is `gridWidth` * `gridHeight` * 9 seconds. (35*30 takes almost 3 hours)
+- Add all coordinates of where to plant the bomb in the consecutive tests
 
 ## Usage
-Add the following launch option to CS:GO  
+Add the following launch option to CS:GO  (remove launch option on next launch)
 
     -netconport 2121  
 
-Run the script  
+Make sure that you are inbounds and noclip is off with
 
-    python3 csctl.py
+    noclip
 
-Then in-game you can run  
+Start a game with bots and enter the following commands in the console
 
-    echo exectn <instruction_file>
+    sv_cheats 1;
+    mp_startmoney 65000;
+    impulse 101;
+    mp_buy_anywhere 1;
+    mp_buytime 99999999999;
+    mp_ignore_round_win_conditions 1;
+    cl_showpos 1;
 
-Or bind to a key with  
+Then these
 
-	bind "<key>" "echo exectn <instruction_file>"
+    sv_infinite_ammo 2;
+    ent_fire !self addoutput "health 20000";
+    give item_kevlar;
+    mp_freezetime 0;
+    mp_c4timer 0;
+    host_timescale 4.0;
+    sv_spawn_afk_bomb_drop_time 999999999999999;
+    
+Run the python script and make sure it could connect to csgo.
+In the console start the mapping with 
+    
+    echo mapbomb
+    
+Don't interfere with the process as the console output is used to get data out of the game
 
-This will execute commands from *instruction_file*, or if the line is *delay x.x*, sleep for *x.x* seconds.  
 
-## Notes
-- Instruction files can be placed in CS:GO's config directory, or the same directory as csctl.py.  
-- Example instruction files are included in the examples folder. (stutter_step.csctl, echo.csctl)
+# Notes
+The game usually crashes after several hours. Different bomb positions may have to be tested one by one.

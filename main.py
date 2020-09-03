@@ -9,17 +9,16 @@ from PIL import Image
 from PIL import ImageDraw
 from PIL import ImageFont
 
-## Tool parameters
-
-# length of a side of the square grid in points to test. Each point takes ~18.5sec. eg. imagewidth=10 -> 10*10 points -> 100*18.5sec
-gridWidth = 5
-gridHeight = 5
+## Tool configuration
+mapname = "cache"  # used for output file name
+gridWidth = 35  # width of the grid of points to test
+gridHeight = 30  # height ... (1 point = )
 # bomb location in in-game coordinates - use 'getpos' console command (possibly need to subtract 20-30 to not clip in the ceiling)
 bomb_poss = [(204.968750, -1114.031250, 1703.093750), (204.968750, -1454.968750, 1703.093750),
              (-325.957367, -1454.968750, 1736.093750), (-324.637268, -1042.984497, 1736.093750)]
 bomb_angles = [(19.366396, 75.690216, 0.000000), (7.922823, -57.091469, 0.000000), (49.837845, -83.500259, 0.000000),
                (75.569008, 36.046520, 0.000000)]
-
+kevlar = True
 # area of the map to cover
 minX = -1833
 maxX = 3374
@@ -29,6 +28,7 @@ maxY = 2438
 minZ = 1600
 maxZ = 2100
 # Radar map bounding pixels in the image
+radar_img = "cache.png"
 radarStartCol = 35
 radarEndCol = 962
 radarStartRow = 181
@@ -44,7 +44,7 @@ tn_port = "2121"
 
 def tp(tn, pos, angle):
     run(tn, f"setpos {pos[0]} {pos[1]} {pos[2]}; setang {angle[0]} {angle[1]} {angle[2]};")
-    sleep(0.005)
+    sleep(0.010)
 
 
 def plant(tn):
@@ -92,7 +92,6 @@ def findValidHeight(tn, x, y):
     while z <= maxZ:
         if isInbouds(tn, (x, y, z), (0, 0, 0)):
             return z
-        print("nope")
         z += zStep
     return -1
 
@@ -109,7 +108,6 @@ def print_e(message):
 
 # List PIDs of processes matching processName
 def processExists(processName):
-    procList = []
     for proc in psutil.process_iter(['name']):
         if proc.info['name'].lower() == processName.lower():
             return True
@@ -120,11 +118,26 @@ def mapIdxToPixel(coord, pixelBounds):
     pixelMinRow, pixelMaxRow, pixelMinCol, pixelMaxCol = pixelBounds
     virtSizeX = (pixelMaxCol - pixelMinCol) * ((gridWidth + 1) / gridWidth)
     virtSizeY = (pixelMaxRow - pixelMinRow) * ((gridHeight + 1) / gridHeight)
-    pixelWidth = pixelMaxCol - pixelMinCol
-    pixelHeight = pixelMaxRow - pixelMinRow
     pixelCol = pixelMinCol + (coord[0]) * (virtSizeX / gridWidth)
     pixelRow = pixelMinRow + (gridHeight - coord[1] - 1) * (virtSizeY / gridHeight)
     return int(pixelRow), int(pixelCol)
+
+
+def addDmgCircle(transp, dmg, pixel):
+    drawTemp = ImageDraw.Draw(transp, "RGBA")
+    if dmg >= 100:
+        drawTemp.ellipse(
+            (pixel[1] - fillSize, pixel[0] - fillSize, pixel[1] + fillSize, pixel[0] + fillSize),
+            fill=(255, 0, 0), outline=(255, 255, 255, 128), width=1)
+    elif dmg > 0:
+        color = int(max(min(dmg, 100) * 1.5, 50)) + 50  # map dmg to colour
+        drawTemp.ellipse(
+            (pixel[1] - fillSize, pixel[0] - fillSize, pixel[1] + fillSize, pixel[0] + fillSize),
+            fill=(0, color, 0), outline=(255, 255, 255, 128), width=1)
+    else:
+        drawTemp.ellipse(
+            (pixel[1] - fillSize, pixel[0] - fillSize, pixel[1] + fillSize, pixel[0] + fillSize),
+            fill=(0, 0, 0, 0), outline=(255, 255, 255, 128), width=1)
 
 
 # Runs commands on the csgo console
@@ -173,17 +186,19 @@ def main():
     while True:
         print_e(":information: Listening for command from console")
         # Capture console output until we encounter our exec string
-        tn.read_until(b"exectn ")
+        tn.read_until(b"mapbomb ")
         run(tn, "endround")
 
+        global mapname
         global minX
         global maxX
         global minY
         global maxY
         global gridWidth
-        global bomb_position
-        global bomb_angle
+        global kevlar
+        global radar_img
 
+        # values used to spread the points evenly across the map
         virtSizeX = (maxX - minX) * ((gridWidth + 1) / gridWidth)
         virtSizeY = (maxY - minY) * ((gridHeight + 1) / gridHeight)
         xStep = virtSizeX / gridWidth
@@ -193,7 +208,7 @@ def main():
             bomb_position = bomb_poss[bombIdx]
             bomb_angle = bomb_poss[bombIdx]
 
-            image = [[-1] * gridWidth for i in range(gridHeight)]
+            image = [[-1] * gridWidth for i in range(gridHeight)]  # the dmg values received at the coords
 
             for xIdx in range(gridWidth):
                 for yIdx in range(gridHeight):
@@ -205,53 +220,43 @@ def main():
                     tp(tn, bomb_position, bomb_angle)
                     plant(tn)
                     tp(tn, (x, y, res), (0, 0, 0))
+                    if kevlar:
+                        run(tn, "give item_kevlar")
                     sleep(10.5 / timescale * 2.1)
                     run(tn, "endround")
                     sleep(0.005)
-                    readStr = tn.read_until(b"Damage Taken from \"World\" - ", 1)
+
+                    readStr = tn.read_until(b"Damage Taken from \"World\" - ", 1 / timescale)
                     if readStr.__contains__(b"Damage Taken from \"World\" - "):
                         dmg = int(tn.read_until(b" "))
                     else:
                         dmg = 0
                     progressPercentage = ((xIdx * gridWidth + yIdx) / (gridWidth * gridWidth)) * 100
-                    print("(" + str(x) + ", " + str(y) + "): " + str(dmg) + " - " + str(progressPercentage) + "%")
+                    print("(" + str(x) + ", " + str(y) + "): " + str(dmg) + "dmg - " + str(progressPercentage) + "%")
                     image[yIdx][xIdx] = dmg
             print(image)
-            # TODO make image
 
-            radar = Image.open("cache.png")
+            # Output image generation
+            print("Starting output image generation")
+            radar = Image.open(radar_img)
             drawer = ImageDraw.Draw(radar, "RGBA")
 
             pixelBounds = (radarStartRow, radarEndRow, radarStartCol, radarEndCol)
             for row in range(gridHeight):
-                print("coco")
+                print("row: " + str(row) + "/" + str(gridWidth - 1))
                 for col in range(gridWidth):
                     dmg = image[row][col]
                     pixel = mapIdxToPixel((col, row), pixelBounds)
-                    print(str(pixel) + ": " + str(dmg))
 
                     transp = Image.new("RGBA", radar.size, (0, 0, 0, 0))
-                    drawTemp = ImageDraw.Draw(transp, "RGBA")
-                    if dmg >= 100:
-                        drawTemp.ellipse(
-                            (pixel[1] - fillSize, pixel[0] - fillSize, pixel[1] + fillSize, pixel[0] + fillSize),
-                            fill=(255, 0, 0), outline=(255, 255, 255, 128), width=1)
-                    elif dmg > 0:
-                        color = int(max(min(dmg, 100) * 1.5, 50)) + 50
-                        drawTemp.ellipse(
-                            (pixel[1] - fillSize, pixel[0] - fillSize, pixel[1] + fillSize, pixel[0] + fillSize),
-                            fill=(0, color, 0), outline=(255, 255, 255, 128), width=1)
-                    else:
-                        drawTemp.ellipse(
-                            (pixel[1] - fillSize, pixel[0] - fillSize, pixel[1] + fillSize, pixel[0] + fillSize),
-                            fill=(0, 0, 0, 0), outline=(255, 255, 255, 128), width=1)
+                    addDmgCircle(transp, dmg, pixel)
 
                     radar.paste(Image.alpha_composite(radar, transp))
                     font = ImageFont.truetype("arial.ttf", 10)
                     w, h = drawer.textsize(str(dmg), font=font)
                     drawer.text((pixel[1] - w / 2, pixel[0] - h / 2), str(dmg), fill="white", font=font)
 
-            radar.save("bomb" + str(bombIdx) + ".png", "PNG")
+            radar.save(f"output/{mapname}_bombloc{str(bombIdx)}_{str(gridWidth)}x{str(gridHeight)}.png", "PNG")
 
 
 if __name__ == "__main__":
