@@ -1,12 +1,15 @@
 # CSGO bomb blast imager
 ## Description
-Tool that checks the dmg taken by the bomb blast on all points on a grid and represents it on the map radar.
+Tool that checks the dmg taken by the bomb blast on all points on a grid and represents it on the map radar.  
+  
+Example result of a 35x30 grid on cache with the bomb in the upper-right corner with kevlar
+![alt text](doc/cache_bombloc0_35x30.png "Cache example result")
 
 Based on a the [@csctl](https://github.com/403-Fruit/csctl) project by [@403-Fruit](https://github.com/403-Fruit) to input console commands programmatically over telnet. A big thank you to him !
 
 ## Setup
     git clone https://github.com/iCristalrope/CSGO-bomb-blast-imager.git
-    cd csctleeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+    cd CSGO-bomb-blast-imager
     pip install -r requirements.txt
 
 ## Prerequisites
@@ -17,6 +20,7 @@ Based on a the [@csctl](https://github.com/403-Fruit/csctl) project by [@403-Fru
   ![alt text](doc/cache.png "Finding rows & columns that bound the play area")
 - Set `gridWidth` and `gridHeight` to specify the density of the grid. Each point takes a bit over 9 seconds so the estimated runtime is `gridWidth` * `gridHeight` * 9 seconds. (35*30 takes almost 3 hours)
 - Add all coordinates of where to plant the bomb in the consecutive tests
+- Choose whether the terrorist wears kevlar armor or not and set `kevlar` accordingly.
 
 ## Usage
 Add the following launch option to CS:GO  (remove launch option on next launch)
