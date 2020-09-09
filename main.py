@@ -12,7 +12,7 @@ from PIL import ImageFont
 ## Tool configuration
 mapname = "cache"  # used for output file name
 gridWidth = 35  # width of the grid of points to test
-gridHeight = 30  # height ... (1 point = )
+gridHeight = 30  # height ... (each point ~ 9sec)
 # bomb location in in-game coordinates - use 'getpos' console command (possibly need to subtract 20-30 to not clip in the ceiling)
 bomb_poss = [(204.968750, -1114.031250, 1703.093750), (204.968750, -1454.968750, 1703.093750),
              (-325.957367, -1454.968750, 1736.093750), (-324.637268, -1042.984497, 1736.093750)]
@@ -238,7 +238,7 @@ def main():
 
             # Output image generation
             print("Starting output image generation")
-            radar = Image.open(radar_img)
+            radar = Image.open(radar_img).convert("RGBA")
             drawer = ImageDraw.Draw(radar, "RGBA")
 
             pixelBounds = (radarStartRow, radarEndRow, radarStartCol, radarEndCol)

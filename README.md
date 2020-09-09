@@ -13,13 +13,13 @@ Based on a the [@csctl](https://github.com/403-Fruit/csctl) project by [@403-Fru
     pip install -r requirements.txt
 
 ## Prerequisites
-- Find a clean image of the radar of the map to test (best around 1000x1000 pixels) and save it in the project folder. Set the `radar_img` global var to the image name and set `mapname` too.
-- In game use the `noclip` and `cl_showpos 1` commands to fly around and find the minimum X, maximum X, minimum Y and maximum Y values of the smallest rectangle containing all the play area of the map and set `minX`, `maxX`, `minY`, `maxY` accordingly. 
+- Find a clean image of the radar of the map to test (best around 1000x1000 pixels, upscale if needed) and save it in the project folder. Set the `radar_img` global var to the image name and set `mapname` too.
+- In game use the `noclip` and `cl_showpos 1` commands to fly around and find the minimum X, maximum X, minimum Y and maximum Y values of the smallest rectangle containing all the play area of the map and set `minX`, `maxX`, `minY`, `maxY` accordingly. Do the same for `minZ` and `maxZ`
   ![alt text](doc/ingame.png "Flying to find the in-game coordinates that define the play area")
 - On the radar image find the minimum column, maximum column, minimum row, maximum row (in pixels) of the same play area rectangle and set `radarStartCol`, `radarEndCol`, `radarStartRow`, `radarEndRow` variables accordingly.
   ![alt text](doc/cache.png "Finding rows & columns that bound the play area")
 - Set `gridWidth` and `gridHeight` to specify the density of the grid. Each point takes a bit over 9 seconds so the estimated runtime is `gridWidth` * `gridHeight` * 9 seconds. (35*30 takes almost 3 hours)
-- Add all coordinates of where to plant the bomb in the consecutive tests
+- Add all coordinates of where to plant the bomb in the consecutive tests with the `getpos` command
 - Choose whether the terrorist wears kevlar armor or not and set `kevlar` accordingly.
 
 ## Usage
